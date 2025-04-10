@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../services/auth/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import AppLogo from '../common/AppLogo';
 
 enum AuthMode {
   SIGN_IN = 'sign_in',
@@ -62,7 +63,10 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-md w-full space-y-8 card">
         <div className="text-center">
-          <img src="/logo.svg" alt="DataMinds.Services Logo" className="h-16 mx-auto" />
+          <div className="flex flex-col items-center">
+            <AppLogo size="large" showText={false} />
+            <h1 className="text-2xl font-bold text-primary-700 mt-4">Invoice Generator</h1>
+          </div>
           <h2 className="mt-6 text-3xl font-extrabold text-text-primary font-lexend">
             {mode === AuthMode.SIGN_IN && 'Sign in to your account'}
             {mode === AuthMode.SIGN_UP && 'Create a new account'}
