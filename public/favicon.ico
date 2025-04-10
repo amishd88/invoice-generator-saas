@@ -1,0 +1,2 @@
+
+Downloading a small PNG favicon for broader browser compatibility is not possible through a text file. But we'll update the HTML to look for both SVG and ICO formats.
