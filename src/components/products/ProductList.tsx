@@ -8,7 +8,7 @@ const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const { showNotification } = useNotification();
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     loadProducts();
@@ -21,7 +21,7 @@ const ProductList: React.FC = () => {
       setProducts(response.data); // Extract the data array
     } catch (error) {
       console.error('Failed to load products:', error);
-      showNotification('error', 'Failed to load products');
+      addNotification('Failed to load products', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -33,10 +33,10 @@ const ProductList: React.FC = () => {
       try {
         await deleteProduct(id);
         setProducts(products.filter(product => product.id !== id));
-        showNotification('success', 'Product deleted successfully');
+        addNotification('Product deleted successfully', 'success');
       } catch (error) {
         console.error('Failed to delete product:', error);
-        showNotification('error', 'Failed to delete product');
+        addNotification('Failed to delete product', 'error');
       } finally {
         setIsDeleting(null);
       }
