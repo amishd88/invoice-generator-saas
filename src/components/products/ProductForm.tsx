@@ -43,7 +43,7 @@ const ProductForm: React.FC = () => {
 
       loadProduct();
     }
-  }, [id, isEditMode, navigate, showNotification]);
+  }, [id, isEditMode, navigate, addNotification]);
 
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
