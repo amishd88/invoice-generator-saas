@@ -7,7 +7,7 @@ import { createProduct, getProductById, updateProduct } from '../../services/pro
 const ProductForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showNotification } = useNotification();
+  const { addNotification } = useNotification();
   const isEditMode = id !== undefined;
 
   // Form state
@@ -30,12 +30,12 @@ const ProductForm: React.FC = () => {
           if (data) {
             setProduct(data);
           } else {
-            showNotification('error', 'Product not found');
+            addNotification('Product not found', 'error');
             navigate('/products');
           }
         } catch (error) {
           console.error('Error loading product:', error);
-          showNotification('error', 'Failed to load product');
+          addNotification('Failed to load product', 'error');
         } finally {
           setIsLoading(false);
         }
@@ -64,15 +64,15 @@ const ProductForm: React.FC = () => {
     try {
       if (isEditMode && id) {
         await updateProduct(id, product);
-        showNotification('success', 'Product updated successfully');
+        addNotification('Product updated successfully', 'success');
       } else {
         await createProduct(product as Omit<Product, 'id' | 'createdAt' | 'updatedAt'>);
-        showNotification('success', 'Product created successfully');
+        addNotification('Product created successfully', 'success');
       }
       navigate('/products');
     } catch (error) {
       console.error('Error saving product:', error);
-      showNotification('error', 'Failed to save product');
+      addNotification('Failed to save product', 'error');
     } finally {
       setIsSaving(false);
     }
