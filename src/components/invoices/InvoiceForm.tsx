@@ -7,6 +7,7 @@ import TemplateSelector from '../TemplateSelector';
 import { Customer, Product, InvoiceState, LineItem } from '../../types';
 import { getInvoiceById, saveInvoice } from '../../services/invoiceService';
 import { invoiceTemplates } from '../../templates/invoiceTemplates';
+import { INVOICE_STATUSES } from './InvoiceStatusManager';
 
 // Invoice Form Component
 const InvoiceForm: React.FC = () => {
@@ -44,6 +45,7 @@ const InvoiceForm: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
   
   // State for current customer (used by CustomerSelector)
   const [currentCustomer, setCurrentCustomer] = useState({
@@ -77,6 +79,13 @@ const InvoiceForm: React.FC = () => {
             name: data.client || '',
             address: data.clientAddress || ''
           });
+          
+          // Check if invoice is paid or cancelled (both are read-only)
+          if (data.status === INVOICE_STATUSES.PAID || data.status === INVOICE_STATUSES.CANCELLED) {
+            setIsReadOnly(true);
+            const statusText = data.status === INVOICE_STATUSES.PAID ? 'paid' : 'cancelled';
+            addNotification(`This invoice has been ${statusText} and cannot be edited.`, 'info');
+          }
         })
         .catch(error => {
           console.error('Error loading invoice:', error);
@@ -294,6 +303,91 @@ const InvoiceForm: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-700"></div>
+      </div>
+    );
+  }
+
+  // If the invoice is paid or cancelled, show a read-only view
+  if (isReadOnly) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-800 font-lexend">
+            Invoice ({invoiceData.status?.charAt(0).toUpperCase() + invoiceData.status?.slice(1)})
+          </h1>
+          <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md">
+            This invoice cannot be edited
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow overflow-hidden p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Invoice Details</h3>
+              <p><strong>Invoice Number:</strong> {invoiceData.invoiceNumber}</p>
+              <p><strong>Date:</strong> {invoiceData.dueDate}</p>
+              <p><strong>Total:</strong> {formatCurrency(calculateTotal())}</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium mb-2">Client Information</h3>
+              <p><strong>Client:</strong> {invoiceData.client}</p>
+              <p><strong>Address:</strong> {invoiceData.clientAddress}</p>
+            </div>
+          </div>
+          
+          <h3 className="text-lg font-medium mb-2">Items</h3>
+          <div className="overflow-x-auto mb-6">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax (%)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {(invoiceData.items || []).map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.description}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.price)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.taxRate}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.quantity * item.price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="mt-6 max-w-md ml-auto">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium text-gray-500">Subtotal:</span>
+                <span className="text-sm text-gray-900">{formatCurrency(calculateSubtotal())}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium text-gray-500">Tax:</span>
+                <span className="text-sm text-gray-900">{formatCurrency(calculateTax())}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-200">
+                <span className="text-base font-medium text-gray-900">Total:</span>
+                <span className="text-base font-medium text-gray-900">{formatCurrency(calculateTotal())}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate('/invoices')}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+            >
+              Back to Invoices
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

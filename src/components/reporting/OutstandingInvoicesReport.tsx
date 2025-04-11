@@ -7,6 +7,9 @@ import {
   type ReportFilter,
   type OutstandingInvoiceItem
 } from '../../services/reporting/reportingService';
+import { updateInvoiceStatus } from '../../services/invoiceService';
+import { INVOICE_STATUSES } from '../invoices/InvoiceStatusManager';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const OutstandingInvoicesReport: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -15,6 +18,8 @@ const OutstandingInvoicesReport: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('daysOverdue');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedAging, setSelectedAging] = useState<string[]>([]);
+  const [processingInvoice, setProcessingInvoice] = useState<string | null>(null);
+  const { showNotification } = useNotification();
 
   // Load data on component mount and when sort changes
   useEffect(() => {
@@ -79,6 +84,28 @@ const OutstandingInvoicesReport: React.FC = () => {
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString();
+  };
+  
+  // Handler for marking an invoice as paid
+  const handleMarkPaid = async (invoiceId: string) => {
+    setProcessingInvoice(invoiceId);
+    setError(null);
+    
+    try {
+      await updateInvoiceStatus(invoiceId, INVOICE_STATUSES.PAID);
+      // Remove the invoice from the list
+      setInvoices(invoices.filter(inv => inv.invoiceId !== invoiceId));
+      
+      // Show success notification if function is available
+      if (typeof showNotification === 'function') {
+        showNotification('success', 'Invoice marked as paid');
+      }
+    } catch (err) {
+      console.error('Error marking invoice as paid:', err);
+      setError('Failed to update invoice status. Please try again.');
+    } finally {
+      setProcessingInvoice(null);
+    }
   };
 
   // Helper for sort icons
@@ -322,8 +349,12 @@ const OutstandingInvoicesReport: React.FC = () => {
                       <Link to={`/invoices/${invoice.invoiceId}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
                         View
                       </Link>
-                      <button className="text-purple-600 hover:text-purple-900">
-                        Mark Paid
+                      <button 
+                        className="text-purple-600 hover:text-purple-900"
+                        disabled={processingInvoice === invoice.invoiceId}
+                        onClick={() => handleMarkPaid(invoice.invoiceId)}
+                      >
+                        {processingInvoice === invoice.invoiceId ? 'Processing...' : 'Mark Paid'}
                       </button>
                     </td>
                   </tr>

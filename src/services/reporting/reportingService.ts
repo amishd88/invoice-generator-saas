@@ -173,7 +173,8 @@ export async function getDashboardMetrics(options: { dateRange?: DateRange } = {
       draft: 0,
       sent: 0,
       paid: 0,
-      overdue: 0
+      overdue: 0,
+      cancelled: 0
     };
     
     // Count status from invoices we already have
@@ -421,8 +422,7 @@ export async function getOutstandingInvoices(filter: ReportFilter): Promise<Outs
         total_paid,
         customers (id, name)
       `)
-      .in('status', ['sent', 'overdue'])
-      .is('paid_date', null); // Only get invoices that haven't been paid
+      .in('status', ['sent', 'overdue']) // Only get invoices with status 'sent' or 'overdue'
     
     // Add date range filter if provided
     if (dateRange) {

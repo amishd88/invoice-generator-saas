@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { useApiErrorHandler } from '../../hooks/useApiErrorHandler';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { updateOverdueInvoices } from '../../services/invoiceService';
+import { useNotification } from '../../contexts/NotificationContext';
 
 /**
  * AppInitializer component
@@ -17,6 +19,37 @@ const AppInitializer: React.FC = () => {
   
   // React Router navigate function for redirects
   const navigate = useNavigate();
+  
+  // Get notification context
+  const { showNotification } = useNotification();
+  
+  // Check for overdue invoices on app initialization
+  useEffect(() => {
+    const checkOverdueInvoices = async () => {
+      try {
+        const updatedCount = await updateOverdueInvoices();
+        if (updatedCount > 0) {
+          console.log(`${updatedCount} invoices marked as overdue`);
+          // Handle notification if needed
+          if (typeof showNotification === 'function') {
+            showNotification('info', `${updatedCount} invoice${updatedCount === 1 ? '' : 's'} marked as overdue`);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking overdue invoices:', error);
+      }
+    };
+    
+    // Check for overdue invoices when a user is logged in
+    const checkSession = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        checkOverdueInvoices();
+      }
+    };
+    
+    checkSession();
+  }, [showNotification]);
   
   // Set up authentication listeners
   useEffect(() => {

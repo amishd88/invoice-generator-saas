@@ -4,6 +4,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { getInvoices, deleteInvoice } from '../../services/invoiceService';
 import { InvoiceState } from '../../types';
+import InvoiceStatusManager, { INVOICE_STATUSES } from './InvoiceStatusManager';
 
 const InvoiceList: React.FC = () => {
   const { canCreateInvoice, openUpgradeModal } = useSubscription();
@@ -62,18 +63,41 @@ const InvoiceList: React.FC = () => {
     }).format(amount);
   };
 
-  // Get invoice status based on due date
+  // Get invoice status based on database value or due date
   const getInvoiceStatus = (invoice: InvoiceState) => {
-    if (!invoice.dueDate) return 'draft';
+    // If status is explicitly set in the database, use that
+    if (invoice.status) return invoice.status;
     
-    const now = new Date();
-    const dueDate = new Date(invoice.dueDate);
-    
-    if (dueDate < now) {
-      return 'overdue';
+    // Otherwise, determine based on due date if a sent invoice is overdue
+    if (invoice.dueDate && invoice.status === INVOICE_STATUSES.SENT) {
+      const now = new Date();
+      const dueDate = new Date(invoice.dueDate);
+      if (dueDate < now) {
+        return INVOICE_STATUSES.OVERDUE;
+      }
     }
     
-    return 'sent';
+    // Default to draft if no status is set
+    return INVOICE_STATUSES.DRAFT;
+  };
+
+  // Add a handler for status updates
+  const handleStatusUpdate = async (invoiceId: string, newStatus: string) => {
+    // Update the local state after a status change
+    setInvoices(prevInvoices => 
+      prevInvoices.map(inv => 
+        inv.id === invoiceId ? { ...inv, status: newStatus } : inv
+      )
+    );
+    
+    try {
+      // Show success notification if function is available
+      if (typeof showNotification === 'function') {
+        showNotification('success', `Invoice status updated to ${newStatus}`);
+      }
+    } catch (error) {
+      console.error('Error showing notification:', error);
+    }
   };
 
   return (
@@ -169,29 +193,31 @@ const InvoiceList: React.FC = () => {
                         {formatCurrency(total, currencyCode)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${status === 'paid' ? 'bg-green-100 text-green-800' : ''}
-                          ${status === 'sent' ? 'bg-blue-100 text-blue-800' : ''}
-                          ${status === 'draft' ? 'bg-gray-100 text-gray-800' : ''}
-                          ${status === 'overdue' ? 'bg-red-100 text-red-800' : ''}
-                        `}>
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
+                        <InvoiceStatusManager
+                          invoiceId={invoice.id}
+                          currentStatus={status}
+                          dueDate={invoice.dueDate}
+                          onStatusUpdated={(newStatus) => handleStatusUpdate(invoice.id, newStatus)}
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <Link to={`/invoices/${invoice.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
                           View
                         </Link>
-                        <Link to={`/invoices/${invoice.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
-                          Edit
-                        </Link>
-                        <button
-                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                          disabled={isDeleting === invoice.id}
-                          onClick={() => handleDeleteInvoice(invoice.id)}
-                        >
-                          {isDeleting === invoice.id ? 'Deleting...' : 'Delete'}
-                        </button>
+                        {status !== INVOICE_STATUSES.PAID && status !== INVOICE_STATUSES.CANCELLED && (
+                          <Link to={`/invoices/${invoice.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                            Edit
+                          </Link>
+                        )}
+                        {status !== INVOICE_STATUSES.PAID && status !== INVOICE_STATUSES.CANCELLED && (
+                          <button
+                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                            disabled={isDeleting === invoice.id}
+                            onClick={() => handleDeleteInvoice(invoice.id)}
+                          >
+                            {isDeleting === invoice.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

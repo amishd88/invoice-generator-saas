@@ -490,6 +490,47 @@ export async function updateInvoiceStatus(id: string, status: string) {
   }
 }
 
+// Check for and update overdue invoices
+export async function updateOverdueInvoices() {
+  try {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Find invoices that are sent and past due date
+    const { data, error } = await supabase
+      .from(INVOICES_TABLE)
+      .select('id, due_date, status')
+      .eq('status', 'sent')
+      .lt('due_date', today);
+    
+    if (error) {
+      console.error('Error checking for overdue invoices:', error);
+      throw error;
+    }
+    
+    // Update status to 'overdue' for these invoices
+    if (data && data.length > 0) {
+      const overdueIds = data.map(invoice => invoice.id);
+      
+      const { error: updateError } = await supabase
+        .from(INVOICES_TABLE)
+        .update({ status: 'overdue', updated_at: new Date().toISOString() })
+        .in('id', overdueIds);
+      
+      if (updateError) {
+        console.error('Error updating overdue invoices:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`Updated ${data.length} invoices to overdue status`);
+    }
+    
+    return data?.length || 0; // Return number of invoices updated
+  } catch (error) {
+    console.error('Error in updateOverdueInvoices:', error);
+    throw error;
+  }
+}
+
 // Delete an invoice and its line items
 export async function deleteInvoice(id: string) {
   try {
